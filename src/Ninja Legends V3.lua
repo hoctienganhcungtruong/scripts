@@ -1,0 +1,175 @@
+-- Load the Aether v9 UI Library
+local Aether = loadstring(game:HttpGet("https://raw.githubusercontent.com/hoctienganhcungtruong/Aether/main/v9.lua"))()
+
+-- Instantiate UI Window
+local UI = Aether.new(
+    "⚡ Aether v9 | Ninja Legends", 
+    Vector2.new(580, 420), 
+    Vector2.new(450, 250)
+)
+
+-- Create Tabs
+local MainTab = UI:AddTab("Main")
+local SettingsTab = UI:AddTab("Settings")
+
+-- State Variables
+local autoSellEnabled = false
+local autoSwingEnabled = false
+local removeEffectsEnabled = false
+local muteSoundsEnabled = false
+local removeTexturesEnabled = false
+
+-- Keep track of original textures so we can restore them if toggled off
+local textureCache = {}
+
+-- ================= MAIN TAB TOGGLES =================
+MainTab:AddToggle("Auto Sell", false, function(state)
+    autoSellEnabled = state
+end)
+
+MainTab:AddToggle("Auto Swing", false, function(state)
+    autoSwingEnabled = state
+end)
+
+-- ================= SETTINGS TAB (OPTIMIZATION) =================
+SettingsTab:AddLabel("Performance Boosters", "h1")
+
+-- 1. Remove Effects (Trails, Particles)
+SettingsTab:AddToggle("Remove Effects", false, function(state)
+    removeEffectsEnabled = state
+    if state then
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Beam") or obj:IsA("Fire") or obj:IsA("Smoke") then
+                obj.Enabled = false
+            end
+        end
+    end
+end)
+
+-- 2. Mute Sounds
+SettingsTab:AddToggle("Mute Game Sounds", false, function(state)
+    muteSoundsEnabled = state
+    for _, obj in ipairs(game:GetDescendants()) do
+        if obj:IsA("Sound") then
+            obj.Volume = state and 0 or (obj:FindFirstChild("OriginalVolume") and obj.OriginalVolume.Value or obj.Volume)
+        end
+    end
+end)
+
+-- 3. Remove Textures (Plastic Graphics)
+SettingsTab:AddToggle("Remove Textures", false, function(state)
+    removeTexturesEnabled = state
+    if state then
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("Texture") or obj:IsA("Decal") then
+                textureCache[obj] = obj.Parent
+                obj.Parent = nil -- Temporarily hide it safely without destroying
+            end
+        end
+    else
+        -- Restore textures
+        for obj, parent in pairs(textureCache) do
+            if obj and parent then
+                obj.Parent = parent
+            end
+        end
+        table.clear(textureCache)
+    end
+end)
+
+-- 4. Disable 3D Rendering (Black Screen CPU Saver)
+SettingsTab:AddToggle("Disable 3D Rendering", false, function(state)
+    game:GetService("RunService"):Set3DRenderingEnabled(not state)
+end)
+
+-- ================= HELPER FUNCTIONS =================
+
+-- Dynamic Circle Finder (Handles different islands dynamically)
+local function getActiveSellPart()
+    local sellFolder = workspace:FindFirstChild("sellAreaCircles")
+    if not sellFolder then return nil end
+
+    local target = sellFolder:FindFirstChild("sellAreaCircle16") 
+    if not target then
+        target = sellFolder:FindFirstChild("sellAreaCircle")
+    end
+    if not target then
+        local children = sellFolder:GetChildren()
+        if #children > 0 then
+            target = children[1]
+        end
+    end
+
+    return target and target:FindFirstChild("circleInner")
+end
+
+-- ================= BACKGROUND LOOPS =================
+
+-- 1. Auto Sell Loop
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if autoSellEnabled then
+            local player = game:GetService("Players").LocalPlayer
+            local character = player.Character
+            local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+
+            if rootPart then
+                local sellPart = getActiveSellPart()
+                if sellPart and sellPart:FindFirstChild("TouchInterest") then
+                    firetouchinterest(rootPart, sellPart, 0)
+                    task.wait(0.1)
+                    firetouchinterest(rootPart, sellPart, 1)
+                end
+            end
+        end
+    end
+end)
+
+-- 2. Auto Swing Loop
+task.spawn(function()
+    while true do
+        task.wait() 
+        if autoSwingEnabled then
+            local player = game:GetService("Players").LocalPlayer
+            local ninjaEvent = player:FindFirstChild("ninjaEvent")
+            
+            if ninjaEvent then
+                ninjaEvent:FireServer("swingKatana")
+            end
+        end
+    end
+end)
+
+-- ================= DYNAMIC RUNTIME LISTENERS =================
+
+-- Listen for newly spawned objects to clean them instantly
+workspace.DescendantAdded:Connect(function(descendant)
+    task.wait() -- Safely wait for properties to initialize
+    
+    if removeEffectsEnabled then
+        if descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") or descendant:IsA("Beam") or descendant:IsA("Fire") or descendant:IsA("Smoke") then
+            descendant.Enabled = false
+        end
+    end
+    
+    if removeTexturesEnabled then
+        if descendant:IsA("Texture") or descendant:IsA("Decal") then
+            descendant.Parent = nil
+        end
+    end
+end)
+
+-- Mute any new sounds that try to play
+game.DescendantAdded:Connect(function(descendant)
+    if muteSoundsEnabled and descendant:IsA("Sound") then
+        task.wait()
+        -- Store the original volume in case we unmute later
+        local origVal = Instance.new("DoubleConstrainedValue")
+        origVal.Name = "OriginalVolume"
+        origVal.Value = descendant.Volume
+        origVal.Parent = descendant
+        
+        descendant.Volume = 0
+    end
+end)
