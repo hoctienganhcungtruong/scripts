@@ -3,5 +3,5 @@ Roblox Scripts
 
 # Ninja Legends
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/hoctienganhcungtruong/scripts/refs/heads/main/Ninja%20Legends.lua"))()
+loadstring(game:HttpGet("https://cdn.jsdelivr.net/gh/hoctienganhcungtruong/scripts@main/Ninja%20Legends.lua"))()
 ```
