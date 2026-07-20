@@ -1,9 +1,9 @@
 -- Load the Aether v9 UI Library
-local Aether = loadstring(game:HttpGet("https://raw.githubusercontent.com/hoctienganhcungtruong/Aether/main/v9.lua"))()
+local Aether = loadstring(game:HttpGet("https://raw.githubusercontent.com/hoctienganhcungtruong/Aether/main/v10.lua"))()
 
 -- Instantiate UI Window
 local UI = Aether.new(
-    "⚡ Aether v9 | Ninja Legends", 
+    "⚡ Aether v10 | Ninja Legends", 
     Vector2.new(580, 420), 
     Vector2.new(450, 250)
 )
